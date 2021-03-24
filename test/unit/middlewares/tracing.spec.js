@@ -102,6 +102,7 @@ describe("Test TracingMiddleware localAction", () => {
 			action,
 			id: "ctx-id",
 			requestID: "request-id",
+			traceID: "trace-id",
 			parentID: "parent-id",
 			level: 3,
 			service: {
@@ -161,7 +162,7 @@ describe("Test TracingMiddleware localAction", () => {
 			expect(ctx.startSpan).toHaveBeenCalledWith("action 'posts.find'", {
 				id: "ctx-id",
 				type: "action",
-				traceID: "request-id",
+				traceID: "trace-id",
 				parentID: "parent-id",
 				service: {
 					fullName: "v1.posts",
@@ -192,7 +193,8 @@ describe("Test TracingMiddleware localAction", () => {
 						}
 					}
 				},
-				sampled: true
+				sampled: true,
+				autoActivate: false
 			});
 
 			expect(ctx.finishSpan).toHaveBeenCalledTimes(1);
@@ -241,7 +243,7 @@ describe("Test TracingMiddleware localAction", () => {
 			expect(ctx.startSpan).toHaveBeenCalledWith("static text", {
 				id: "ctx-id",
 				type: "action",
-				traceID: "request-id",
+				traceID: "trace-id",
 				parentID: "parent-id",
 				service: null,
 				tags: {
@@ -273,7 +275,8 @@ describe("Test TracingMiddleware localAction", () => {
 						}
 					}
 				},
-				sampled: true
+				sampled: true,
+				autoActivate: false
 			});
 
 			expect(ctx.finishSpan).toHaveBeenCalledTimes(1);
@@ -320,7 +323,7 @@ describe("Test TracingMiddleware localAction", () => {
 			expect(ctx.startSpan).toHaveBeenCalledWith("The posts.find action called", {
 				id: "ctx-id",
 				type: "action",
-				traceID: "request-id",
+				traceID: "trace-id",
 				parentID: "parent-id",
 				service: null,
 				tags: {
@@ -353,7 +356,8 @@ describe("Test TracingMiddleware localAction", () => {
 						}
 					}
 				},
-				sampled: true
+				sampled: true,
+				autoActivate: false
 			});
 
 			expect(fakeSpan.addTags).toHaveBeenCalledTimes(1);
@@ -392,7 +396,7 @@ describe("Test TracingMiddleware localAction", () => {
 			expect(ctx.startSpan).toHaveBeenCalledWith("action 'posts.find'", {
 				id: "ctx-id",
 				type: "action",
-				traceID: "request-id",
+				traceID: "trace-id",
 				parentID: "parent-id",
 				service: null,
 				tags: {
@@ -410,7 +414,8 @@ describe("Test TracingMiddleware localAction", () => {
 					requestID: "request-id",
 					remoteCall: false
 				},
-				sampled: true
+				sampled: true,
+				autoActivate: false
 			});
 
 			expect(fakeSpan.addTags).toHaveBeenCalledTimes(1);
@@ -450,7 +455,7 @@ describe("Test TracingMiddleware localAction", () => {
 			expect(ctx.startSpan).toHaveBeenCalledWith("action 'posts.find'", {
 				id: "ctx-id",
 				type: "action",
-				traceID: "request-id",
+				traceID: "trace-id",
 				parentID: "parent-id",
 				service: null,
 				tags: {
@@ -485,7 +490,8 @@ describe("Test TracingMiddleware localAction", () => {
 						response: undefined
 					}
 				},
-				sampled: true
+				sampled: true,
+				autoActivate: false
 			});
 
 			expect(fakeSpan.addTags).toHaveBeenCalledTimes(1);
@@ -538,6 +544,7 @@ describe("Test TracingMiddleware localAction", () => {
 			fakeSpan.sampled = false;
 
 			ctx.requestID = null;
+			ctx.traceID = null;
 			ctx.parentID = null;
 
 			tracer.getCurrentTraceID = jest.fn(() => "tracer-trace-id");
@@ -562,8 +569,8 @@ describe("Test TracingMiddleware localAction", () => {
 					expect(action.tracing.tags).toHaveBeenCalledTimes(1);
 					expect(action.tracing.tags).toHaveBeenCalledWith(ctx);
 
-					expect(tracer.getCurrentTraceID).toHaveBeenCalledTimes(1);
-					expect(tracer.getActiveSpanID).toHaveBeenCalledTimes(1);
+				expect(tracer.getCurrentTraceID).toHaveBeenCalledTimes(2);
+				expect(tracer.getActiveSpanID).toHaveBeenCalledTimes(1);
 
 					expect(ctx.startSpan).toHaveBeenCalledTimes(1);
 					expect(ctx.startSpan).toHaveBeenCalledWith("action 'posts.find'", {
@@ -603,19 +610,10 @@ describe("Test TracingMiddleware localAction", () => {
 									}
 								}
 							}
-						},
-						sampled: true
-					});
-
-					expect(ctx.tracing).toBe(false);
-
-					expect(fakeSpan.addTags).toHaveBeenCalledTimes(0);
-
-					expect(ctx.finishSpan).toHaveBeenCalledTimes(1);
-					expect(ctx.finishSpan).toHaveBeenCalledWith(fakeSpan);
-
-					expect(fakeSpan.setError).toHaveBeenCalledTimes(1);
-					expect(fakeSpan.setError).toHaveBeenCalledWith(err);
+						}
+					},
+					sampled: true,
+					autoActivate: false
 				});
 		});
 
@@ -664,7 +662,8 @@ describe("Test TracingMiddleware localAction", () => {
 
 					params: "Moleculer"
 				},
-				sampled: false
+				sampled: false,
+				autoActivate: false
 			});
 
 			expect(fakeSpan.addTags).toHaveBeenCalledTimes(1);
@@ -808,6 +807,7 @@ describe("Test TracingMiddleware localAction", () => {
 				};
 
 				ctx.parentID = null;
+				ctx.traceID = null;
 
 				tracer.getCurrentTraceID = jest.fn(() => "tracer-trace-id");
 				tracer.getActiveSpanID = jest.fn(() => "tracer-span-id");
@@ -859,8 +859,9 @@ describe("Test TracingMiddleware localAction", () => {
 						requestID: "request-id",
 						remoteCall: false
 					},
-					traceID: "request-id",
-					type: "action"
+					traceID: "tracer-trace-id",
+					type: "action",
+					autoActivate: false
 				});
 
 				expect(fakeSpan.addTags).toHaveBeenCalledTimes(1);
@@ -896,6 +897,7 @@ describe("Test TracingMiddleware localAction", () => {
 				fakeSpan.sampled = false;
 
 				ctx.parentID = null;
+				ctx.traceID = null;
 
 				tracer.getCurrentTraceID = jest.fn(() => "tracer-trace-id");
 				tracer.getActiveSpanID = jest.fn(() => "tracer-span-id");
@@ -943,8 +945,10 @@ describe("Test TracingMiddleware localAction", () => {
 						requestID: "request-id",
 						remoteCall: false
 					},
-					traceID: "request-id",
-					type: "action"
+					traceID: "tracer-trace-id",
+					type: "action",
+					autoActivate: false
+
 				});
 				expect(fakeSpan.addTags).toHaveBeenCalledTimes(1);
 
@@ -968,6 +972,7 @@ describe("Test TracingMiddleware localAction", () => {
 				fakeSpan.sampled = false;
 
 				ctx.parentID = null;
+				ctx.traceID = null;
 
 				tracer.getCurrentTraceID = jest.fn(() => "tracer-trace-id");
 				tracer.getActiveSpanID = jest.fn(() => "tracer-span-id");
@@ -1009,8 +1014,9 @@ describe("Test TracingMiddleware localAction", () => {
 						requestID: "request-id",
 						remoteCall: false
 					},
-					traceID: "request-id",
-					type: "action"
+					traceID: "tracer-trace-id",
+					type: "action",
+					autoActivate: false
 				});
 
 				expect(fakeSpan.addTags).toHaveBeenCalledTimes(1);
@@ -1042,6 +1048,7 @@ describe("Test TracingMiddleware localAction", () => {
 				fakeSpan.sampled = false;
 
 				ctx.parentID = null;
+				ctx.traceID = null;
 
 				tracer.getCurrentTraceID = jest.fn(() => "tracer-trace-id");
 				tracer.getActiveSpanID = jest.fn(() => "tracer-span-id");
@@ -1086,8 +1093,9 @@ describe("Test TracingMiddleware localAction", () => {
 						requestID: "request-id",
 						remoteCall: false
 					},
-					traceID: "request-id",
-					type: "action"
+					traceID: "tracer-trace-id",
+					type: "action",
+					autoActivate: false
 				});
 
 				expect(fakeSpan.addTags).toHaveBeenCalledTimes(1);
@@ -1136,6 +1144,7 @@ describe("Test TracingMiddleware localAction", () => {
 				};
 
 				ctx.parentID = null;
+				ctx.traceID = null;
 
 				tracer.getCurrentTraceID = jest.fn(() => "tracer-trace-id");
 				tracer.getActiveSpanID = jest.fn(() => "tracer-span-id");
@@ -1175,8 +1184,9 @@ describe("Test TracingMiddleware localAction", () => {
 						requestID: "request-id",
 						remoteCall: false
 					},
-					traceID: "request-id",
-					type: "action"
+					traceID: "tracer-trace-id",
+					type: "action",
+					autoActivate: false
 				});
 
 				expect(fakeSpan.addTags).toHaveBeenCalledTimes(1);
@@ -1301,6 +1311,7 @@ describe("Test TracingMiddleware localEvent", () => {
 			event,
 			id: "ctx-id",
 			requestID: "request-id",
+			traceID: "trace-id",
 			parentID: "parent-id",
 			eventName: "user.created",
 			eventType: "emit",
@@ -1359,7 +1370,7 @@ describe("Test TracingMiddleware localEvent", () => {
 			expect(ctx.startSpan).toHaveBeenCalledWith("event 'user.created' in 'v1.posts'", {
 				id: "ctx-id",
 				type: "event",
-				traceID: "request-id",
+				traceID: "trace-id",
 				parentID: "parent-id",
 				service: {
 					fullName: "v1.posts",
@@ -1388,7 +1399,8 @@ describe("Test TracingMiddleware localEvent", () => {
 						}
 					}
 				},
-				sampled: true
+				sampled: true,
+				autoActivate: false
 			});
 
 			expect(ctx.span).toBeUndefined();
@@ -1435,7 +1447,7 @@ describe("Test TracingMiddleware localEvent", () => {
 			expect(ctx.startSpan).toHaveBeenCalledWith("static text", {
 				id: "ctx-id",
 				type: "event",
-				traceID: "request-id",
+				traceID: "trace-id",
 				parentID: "parent-id",
 				service: {
 					fullName: "v1.posts",
@@ -1469,7 +1481,8 @@ describe("Test TracingMiddleware localEvent", () => {
 						}
 					}
 				},
-				sampled: true
+				sampled: true,
+				autoActivate: false
 			});
 
 			expect(ctx.span).toBeUndefined();
@@ -1512,7 +1525,7 @@ describe("Test TracingMiddleware localEvent", () => {
 			expect(ctx.startSpan).toHaveBeenCalledWith("The user.created triggered", {
 				id: "ctx-id",
 				type: "event",
-				traceID: "request-id",
+				traceID: "trace-id",
 				parentID: "parent-id",
 				service: {
 					fullName: "v1.posts",
@@ -1547,7 +1560,8 @@ describe("Test TracingMiddleware localEvent", () => {
 						}
 					}
 				},
-				sampled: true
+				sampled: true,
+				autoActivate: false
 			});
 
 			expect(fakeSpan.addTags).toHaveBeenCalledTimes(0);
@@ -1581,7 +1595,7 @@ describe("Test TracingMiddleware localEvent", () => {
 			expect(ctx.startSpan).toHaveBeenCalledWith("event 'user.created' in 'v1.posts'", {
 				id: "ctx-id",
 				type: "event",
-				traceID: "request-id",
+				traceID: "trace-id",
 				parentID: "parent-id",
 				service: {
 					fullName: "v1.posts",
@@ -1601,7 +1615,8 @@ describe("Test TracingMiddleware localEvent", () => {
 					remoteCall: false,
 					requestID: "request-id"
 				},
-				sampled: true
+				sampled: true,
+				autoActivate: false
 			});
 
 			expect(fakeSpan.addTags).toHaveBeenCalledTimes(0);
@@ -1638,7 +1653,7 @@ describe("Test TracingMiddleware localEvent", () => {
 			expect(ctx.startSpan).toHaveBeenCalledWith("event 'user.created' in 'v1.posts'", {
 				id: "ctx-id",
 				type: "event",
-				traceID: "request-id",
+				traceID: "trace-id",
 				parentID: "parent-id",
 				service: {
 					fullName: "v1.posts",
@@ -1676,7 +1691,8 @@ describe("Test TracingMiddleware localEvent", () => {
 						response: undefined
 					}
 				},
-				sampled: true
+				sampled: true,
+				autoActivate: false
 			});
 
 			expect(fakeSpan.addTags).toHaveBeenCalledTimes(0);
@@ -1704,6 +1720,7 @@ describe("Test TracingMiddleware localEvent", () => {
 			fakeSpan.sampled = false;
 
 			ctx.requestID = null;
+			ctx.traceID = null;
 			ctx.parentID = null;
 
 			tracer.getCurrentTraceID = jest.fn(() => "tracer-trace-id");
@@ -1728,8 +1745,8 @@ describe("Test TracingMiddleware localEvent", () => {
 					expect(event.tracing.tags).toHaveBeenCalledTimes(1);
 					expect(event.tracing.tags).toHaveBeenCalledWith(ctx);
 
-					expect(tracer.getCurrentTraceID).toHaveBeenCalledTimes(1);
-					expect(tracer.getActiveSpanID).toHaveBeenCalledTimes(1);
+				expect(tracer.getCurrentTraceID).toHaveBeenCalledTimes(2);
+				expect(tracer.getActiveSpanID).toHaveBeenCalledTimes(1);
 
 					expect(ctx.startSpan).toHaveBeenCalledTimes(1);
 					expect(ctx.startSpan).toHaveBeenCalledWith(
@@ -1774,7 +1791,8 @@ describe("Test TracingMiddleware localEvent", () => {
 									}
 								}
 							},
-							sampled: true
+							sampled: true,
+							autoActivate: false
 						}
 					);
 
@@ -1837,7 +1855,8 @@ describe("Test TracingMiddleware localEvent", () => {
 
 					params: "Moleculer"
 				},
-				sampled: false
+				sampled: false,
+				autoActivate: false
 			});
 
 			expect(fakeSpan.addTags).toHaveBeenCalledTimes(0);
@@ -1914,7 +1933,8 @@ describe("Test TracingMiddleware localEvent", () => {
 						}
 					}
 				},
-				sampled: false
+				sampled: false,
+				autoActivate: false
 			});
 
 			expect(fakeSpan.addTags).toHaveBeenCalledTimes(0);
@@ -1993,6 +2013,7 @@ describe("Test TracingMiddleware localEvent", () => {
 				};
 
 				ctx.parentID = null;
+				ctx.traceID = null;
 
 				tracer.getCurrentTraceID = jest.fn(() => "tracer-trace-id");
 				tracer.getActiveSpanID = jest.fn(() => "tracer-span-id");
@@ -2044,8 +2065,9 @@ describe("Test TracingMiddleware localEvent", () => {
 						remoteCall: false,
 						requestID: "request-id"
 					},
-					traceID: "request-id",
-					type: "event"
+					traceID: "tracer-trace-id",
+					type: "event",
+					autoActivate: false
 				});
 
 				expect(ctx.tracing).toBe(true);
@@ -2080,6 +2102,7 @@ describe("Test TracingMiddleware localEvent", () => {
 				tracer.getActiveSpanID = jest.fn();
 
 				ctx.parentID = null;
+				ctx.traceID = null;
 
 				tracer.getCurrentTraceID = jest.fn(() => "tracer-trace-id");
 				tracer.getActiveSpanID = jest.fn(() => "tracer-span-id");
@@ -2128,8 +2151,9 @@ describe("Test TracingMiddleware localEvent", () => {
 						remoteCall: false,
 						requestID: "request-id"
 					},
-					traceID: "request-id",
-					type: "event"
+					traceID: "tracer-trace-id",
+					type: "event",
+					autoActivate: false
 				});
 				expect(ctx.tracing).toBe(true);
 
@@ -2156,6 +2180,7 @@ describe("Test TracingMiddleware localEvent", () => {
 				tracer.getActiveSpanID = jest.fn();
 
 				ctx.parentID = null;
+				ctx.traceID = null;
 
 				tracer.getCurrentTraceID = jest.fn(() => "tracer-trace-id");
 				tracer.getActiveSpanID = jest.fn(() => "tracer-span-id");
@@ -2205,8 +2230,9 @@ describe("Test TracingMiddleware localEvent", () => {
 						remoteCall: false,
 						requestID: "request-id"
 					},
-					traceID: "request-id",
-					type: "event"
+					traceID: "tracer-trace-id",
+					type: "event",
+					autoActivate: false
 				});
 				expect(ctx.tracing).toBe(true);
 
@@ -2236,6 +2262,7 @@ describe("Test TracingMiddleware localEvent", () => {
 				tracer.getActiveSpanID = jest.fn();
 
 				ctx.parentID = null;
+				ctx.traceID = null;
 
 				tracer.getCurrentTraceID = jest.fn(() => "tracer-trace-id");
 				tracer.getActiveSpanID = jest.fn(() => "tracer-span-id");
@@ -2288,8 +2315,9 @@ describe("Test TracingMiddleware localEvent", () => {
 						remoteCall: false,
 						requestID: "request-id"
 					},
-					traceID: "request-id",
-					type: "event"
+					traceID: "tracer-trace-id",
+					type: "event",
+					autoActivate: false
 				});
 				expect(ctx.tracing).toBe(true);
 
@@ -2327,6 +2355,7 @@ describe("Test TracingMiddleware localEvent", () => {
 				};
 
 				ctx.parentID = null;
+				ctx.traceID = null;
 
 				tracer.getCurrentTraceID = jest.fn(() => "tracer-trace-id");
 				tracer.getActiveSpanID = jest.fn(() => "tracer-span-id");
@@ -2374,8 +2403,9 @@ describe("Test TracingMiddleware localEvent", () => {
 						remoteCall: false,
 						requestID: "request-id"
 					},
-					traceID: "request-id",
-					type: "event"
+					traceID: "tracer-trace-id",
+					type: "event",
+					autoActivate: false
 				});
 				expect(ctx.tracing).toBe(true);
 

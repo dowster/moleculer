@@ -20,6 +20,7 @@ module.exports = function TracingMiddleware(broker) {
 		if (opts.enabled) {
 			return function tracingLocalActionMiddleware(ctx) {
 				ctx.requestID = ctx.requestID || tracer.getCurrentTraceID();
+				ctx.traceID = ctx.traceID || tracer.getCurrentTraceID();
 				ctx.parentID = ctx.parentID || tracer.getActiveSpanID();
 
 				let tags = {
@@ -88,17 +89,19 @@ module.exports = function TracingMiddleware(broker) {
 				const span = ctx.startSpan(spanName, {
 					id: ctx.id,
 					type: "action",
-					traceID: ctx.requestID,
+					traceID: ctx.traceID || ctx.requestID,
 					parentID: ctx.parentID,
 					service: ctx.service,
 					sampled: ctx.tracing,
+					autoActivate: false,
 					tags
 				});
 
 				ctx.tracing = span.sampled;
 
 				// Call the handler
-				return handler(ctx)
+				return tracer
+					.activate(span, () => handler(ctx))
 					.then(res => {
 						const tags = {
 							fromCache: ctx.cachedResult
@@ -146,6 +149,7 @@ module.exports = function TracingMiddleware(broker) {
 		if (opts.enabled) {
 			return function tracingLocalEventMiddleware(ctx) {
 				ctx.requestID = ctx.requestID || tracer.getCurrentTraceID();
+				ctx.traceID = ctx.traceID || tracer.getCurrentTraceID();
 				ctx.parentID = ctx.parentID || tracer.getActiveSpanID();
 
 				let tags = {
@@ -211,18 +215,19 @@ module.exports = function TracingMiddleware(broker) {
 				const span = ctx.startSpan(spanName, {
 					id: ctx.id,
 					type: "event",
-					traceID: ctx.requestID,
+					traceID: ctx.traceID || ctx.requestID,
 					parentID: ctx.parentID,
 					service,
 					sampled: ctx.tracing,
+					autoActivate: false,
 					tags
 				});
 
 				ctx.tracing = span.sampled;
 
 				// Call the handler
-				return handler
-					.apply(service, arguments)
+				return tracer
+					.activate(span, () => handler.apply(service, arguments))
 					.then(() => {
 						ctx.finishSpan(span);
 					})

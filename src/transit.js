@@ -446,6 +446,7 @@ class Transit {
 		ctx.level = payload.level;
 		ctx.tracing = !!payload.tracing;
 		ctx.parentID = payload.parentID;
+		ctx.traceID = payload.traceID;
 		ctx.requestID = payload.requestID;
 		ctx.caller = payload.caller;
 		ctx.nodeID = payload.sender;
@@ -493,6 +494,7 @@ class Transit {
 			ctx.id = payload.id;
 			ctx.setParams(pass ? pass : payload.params, this.broker.options.contextParamsCloning);
 			ctx.parentID = payload.parentID;
+			ctx.traceID = payload.traceID;
 			ctx.requestID = payload.requestID;
 			ctx.caller = payload.caller;
 			ctx.meta = payload.meta || {};
@@ -826,6 +828,7 @@ class Transit {
 			level: ctx.level,
 			tracing: ctx.tracing,
 			parentID: ctx.parentID,
+			traceID: ctx.traceID,
 			requestID: ctx.requestID,
 			caller: ctx.caller,
 			stream: isStream
@@ -985,6 +988,7 @@ class Transit {
 				level: ctx.level,
 				tracing: ctx.tracing,
 				parentID: ctx.parentID,
+				traceID: ctx.traceID,
 				requestID: ctx.requestID,
 				caller: ctx.caller,
 				needAck: ctx.needAck

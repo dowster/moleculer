@@ -779,7 +779,7 @@ describe("Test Service class", () => {
 			expect(svc.list("John")).toBe("Hello John");
 		});
 
-		it("should create action definition from a schema", () => {
+		it("should create method definition from a schema", () => {
 			const schema = {
 				uppercase: true,
 				handler: jest.fn(function (name) {
