@@ -8,6 +8,7 @@
 
 const { QueueIsFullError } = require("../errors");
 const { METRIC } = require("../metrics");
+const { OS_TYPE } = require("../metrics/constants");
 
 module.exports = function bulkheadMiddleware(broker) {
 	function wrapActionBulkheadMiddleware(handler, action) {
@@ -17,6 +18,38 @@ module.exports = function bulkheadMiddleware(broker) {
 		if (opts.enabled) {
 			const queue = [];
 			let currentInFlight = 0;
+
+			const updateBulkheadMetrics = function updateBulkheadMetrics() {
+				broker.metrics.set(METRIC.MOLECULER_REQUEST_BULKHEAD_INFLIGHT, currentInFlight, {
+					action: action.name,
+					service: service.fullName
+				});
+				if (opts.concurrency) {
+					broker.metrics.set(
+						METRIC.MOLECULER_REQUEST_BULKHEAD_INFLIGHT_LIMIT,
+						opts.concurrency,
+						{
+							action: action.name,
+							service: service.fullName
+						}
+					);
+				}
+
+				broker.metrics.set(METRIC.MOLECULER_REQUEST_BULKHEAD_QUEUE_SIZE, queue.length, {
+					action: action.name,
+					service: service.fullName
+				});
+				if (opts.maxQueueSize) {
+					broker.metrics.set(
+						METRIC.MOLECULER_REQUEST_BULKHEAD_QUEUE_SIZE_LIMIT,
+						opts.maxQueueSize,
+						{
+							action: action.name,
+							service: service.fullName
+						}
+					);
+				}
+			};
 
 			// Call the next request from the queue
 			const callNext = function callNext() {
@@ -29,43 +62,18 @@ module.exports = function bulkheadMiddleware(broker) {
 				const item = queue.shift();
 
 				currentInFlight++;
-				broker.metrics.set(METRIC.MOLECULER_REQUEST_BULKHEAD_INFLIGHT, currentInFlight, {
-					action: action.name,
-					service: service.fullName
-				});
-				broker.metrics.set(METRIC.MOLECULER_REQUEST_BULKHEAD_QUEUE_SIZE, queue.length, {
-					action: action.name,
-					service: service.fullName
-				});
+				updateBulkheadMetrics();
 
 				handler(item.ctx)
 					.then(res => {
 						currentInFlight--;
-						broker.metrics.set(
-							METRIC.MOLECULER_REQUEST_BULKHEAD_INFLIGHT,
-							currentInFlight,
-							{ action: action.name, service: service.fullName }
-						);
-						broker.metrics.set(
-							METRIC.MOLECULER_REQUEST_BULKHEAD_QUEUE_SIZE,
-							queue.length,
-							{ action: action.name, service: service.fullName }
-						);
+						updateBulkheadMetrics();
 						item.resolve(res);
 						callNext();
 					})
 					.catch(err => {
 						currentInFlight--;
-						broker.metrics.set(
-							METRIC.MOLECULER_REQUEST_BULKHEAD_INFLIGHT,
-							currentInFlight,
-							{ action: action.name, service: service.fullName }
-						);
-						broker.metrics.set(
-							METRIC.MOLECULER_REQUEST_BULKHEAD_QUEUE_SIZE,
-							queue.length,
-							{ action: action.name, service: service.fullName }
-						);
+						updateBulkheadMetrics();
 						item.reject(err);
 						callNext();
 					});
@@ -75,43 +83,18 @@ module.exports = function bulkheadMiddleware(broker) {
 				// Call handler without waiting
 				if (currentInFlight < opts.concurrency) {
 					currentInFlight++;
-					broker.metrics.set(
-						METRIC.MOLECULER_REQUEST_BULKHEAD_INFLIGHT,
-						currentInFlight,
-						{ action: action.name, service: service.fullName }
-					);
-					broker.metrics.set(METRIC.MOLECULER_REQUEST_BULKHEAD_QUEUE_SIZE, queue.length, {
-						action: action.name,
-						service: service.fullName
-					});
+
+					updateBulkheadMetrics();
 					return handler(ctx)
 						.then(res => {
 							currentInFlight--;
-							broker.metrics.set(
-								METRIC.MOLECULER_REQUEST_BULKHEAD_INFLIGHT,
-								currentInFlight,
-								{ action: action.name, service: service.fullName }
-							);
-							broker.metrics.set(
-								METRIC.MOLECULER_REQUEST_BULKHEAD_QUEUE_SIZE,
-								queue.length,
-								{ action: action.name, service: service.fullName }
-							);
+							updateBulkheadMetrics();
 							callNext();
 							return res;
 						})
 						.catch(err => {
 							currentInFlight--;
-							broker.metrics.set(
-								METRIC.MOLECULER_REQUEST_BULKHEAD_INFLIGHT,
-								currentInFlight,
-								{ action: action.name, service: service.fullName }
-							);
-							broker.metrics.set(
-								METRIC.MOLECULER_REQUEST_BULKHEAD_QUEUE_SIZE,
-								queue.length,
-								{ action: action.name, service: service.fullName }
-							);
+							updateBulkheadMetrics();
 							callNext();
 							return broker.Promise.reject(err);
 						});
@@ -126,10 +109,7 @@ module.exports = function bulkheadMiddleware(broker) {
 
 				// Store the request in the queue
 				const p = new Promise((resolve, reject) => queue.push({ resolve, reject, ctx }));
-				broker.metrics.set(METRIC.MOLECULER_REQUEST_BULKHEAD_QUEUE_SIZE, queue.length, {
-					action: action.name,
-					service: service.fullName
-				});
+				updateBulkheadMetrics();
 
 				return p;
 			}.bind(this);
@@ -146,6 +126,37 @@ module.exports = function bulkheadMiddleware(broker) {
 			const queue = [];
 			let currentInFlight = 0;
 
+			const updateBulkheadMetrics = function updateBulkheadMetrics() {
+				broker.metrics.set(METRIC.MOLECULER_EVENT_BULKHEAD_INFLIGHT, currentInFlight, {
+					event: event.name,
+					service: service.fullName
+				});
+				if (opts.concurrency) {
+					broker.metrics.set(
+						METRIC.MOLECULER_EVENT_BULKHEAD_INFLIGHT_LIMIT,
+						opts.concurrency,
+						{
+							event: event.name,
+							service: service.fullName
+						}
+					);
+				}
+				broker.metrics.set(METRIC.MOLECULER_EVENT_BULKHEAD_QUEUE_SIZE, queue.length, {
+					event: event.name,
+					service: service.fullName
+				});
+				if (opts.maxQueueSize) {
+					broker.metrics.set(
+						METRIC.MOLECULER_EVENT_BULKHEAD_QUEUE_SIZE_LIMIT,
+						opts.maxQueueSize,
+						{
+							event: event.name,
+							service: service.fullName
+						}
+					);
+				}
+			};
+
 			// Call the next request from the queue
 			const callNext = function callNext() {
 				/* istanbul ignore next */
@@ -157,43 +168,18 @@ module.exports = function bulkheadMiddleware(broker) {
 				const item = queue.shift();
 
 				currentInFlight++;
-				broker.metrics.set(METRIC.MOLECULER_EVENT_BULKHEAD_INFLIGHT, currentInFlight, {
-					event: event.name,
-					service: service.fullName
-				});
-				broker.metrics.set(METRIC.MOLECULER_EVENT_BULKHEAD_QUEUE_SIZE, queue.length, {
-					event: event.name,
-					service: service.fullName
-				});
+				updateBulkheadMetrics();
 
 				handler(item.ctx)
 					.then(res => {
 						currentInFlight--;
-						broker.metrics.set(
-							METRIC.MOLECULER_EVENT_BULKHEAD_INFLIGHT,
-							currentInFlight,
-							{ event: event.name, service: service.fullName }
-						);
-						broker.metrics.set(
-							METRIC.MOLECULER_EVENT_BULKHEAD_QUEUE_SIZE,
-							queue.length,
-							{ event: event.name, service: service.fullName }
-						);
+						updateBulkheadMetrics();
 						item.resolve(res);
 						callNext();
 					})
 					.catch(err => {
 						currentInFlight--;
-						broker.metrics.set(
-							METRIC.MOLECULER_EVENT_BULKHEAD_INFLIGHT,
-							currentInFlight,
-							{ event: event.name, service: service.fullName }
-						);
-						broker.metrics.set(
-							METRIC.MOLECULER_EVENT_BULKHEAD_QUEUE_SIZE,
-							queue.length,
-							{ event: event.name, service: service.fullName }
-						);
+						updateBulkheadMetrics();
 						item.reject(err);
 						callNext();
 					});
@@ -203,42 +189,17 @@ module.exports = function bulkheadMiddleware(broker) {
 				// Call handler without waiting
 				if (currentInFlight < opts.concurrency) {
 					currentInFlight++;
-					broker.metrics.set(METRIC.MOLECULER_EVENT_BULKHEAD_INFLIGHT, currentInFlight, {
-						event: event.name,
-						service: service.fullName
-					});
-					broker.metrics.set(METRIC.MOLECULER_EVENT_BULKHEAD_QUEUE_SIZE, queue.length, {
-						event: event.name,
-						service: service.fullName
-					});
+					updateBulkheadMetrics();
 					return handler(ctx)
 						.then(res => {
 							currentInFlight--;
-							broker.metrics.set(
-								METRIC.MOLECULER_EVENT_BULKHEAD_INFLIGHT,
-								currentInFlight,
-								{ event: event.name, service: service.fullName }
-							);
-							broker.metrics.set(
-								METRIC.MOLECULER_EVENT_BULKHEAD_QUEUE_SIZE,
-								queue.length,
-								{ event: event.name, service: service.fullName }
-							);
+							updateBulkheadMetrics();
 							callNext();
 							return res;
 						})
 						.catch(err => {
 							currentInFlight--;
-							broker.metrics.set(
-								METRIC.MOLECULER_EVENT_BULKHEAD_INFLIGHT,
-								currentInFlight,
-								{ event: event.name, service: service.fullName }
-							);
-							broker.metrics.set(
-								METRIC.MOLECULER_EVENT_BULKHEAD_QUEUE_SIZE,
-								queue.length,
-								{ event: event.name, service: service.fullName }
-							);
+							updateBulkheadMetrics();
 							callNext();
 							return broker.Promise.reject(err);
 						});
@@ -257,10 +218,7 @@ module.exports = function bulkheadMiddleware(broker) {
 
 				// Store the request in the queue
 				const p = new Promise((resolve, reject) => queue.push({ resolve, reject, ctx }));
-				broker.metrics.set(METRIC.MOLECULER_EVENT_BULKHEAD_QUEUE_SIZE, queue.length, {
-					event: event.name,
-					service: service.fullName
-				});
+				updateBulkheadMetrics();
 
 				return p;
 			}.bind(this);
@@ -280,7 +238,17 @@ module.exports = function bulkheadMiddleware(broker) {
 					labelNames: ["action", "service"]
 				});
 				broker.metrics.register({
+					name: METRIC.MOLECULER_REQUEST_BULKHEAD_INFLIGHT_LIMIT,
+					type: METRIC.TYPE_GAUGE,
+					labelNames: ["action", "service"]
+				});
+				broker.metrics.register({
 					name: METRIC.MOLECULER_REQUEST_BULKHEAD_QUEUE_SIZE,
+					type: METRIC.TYPE_GAUGE,
+					labelNames: ["action", "service"]
+				});
+				broker.metrics.register({
+					name: METRIC.MOLECULER_REQUEST_BULKHEAD_QUEUE_SIZE_LIMIT,
 					type: METRIC.TYPE_GAUGE,
 					labelNames: ["action", "service"]
 				});
@@ -291,7 +259,17 @@ module.exports = function bulkheadMiddleware(broker) {
 					labelNames: ["event", "service"]
 				});
 				broker.metrics.register({
+					name: METRIC.MOLECULER_EVENT_BULKHEAD_INFLIGHT_LIMIT,
+					type: METRIC.TYPE_GAUGE,
+					labelNames: ["event", "service"]
+				});
+				broker.metrics.register({
 					name: METRIC.MOLECULER_EVENT_BULKHEAD_QUEUE_SIZE,
+					type: METRIC.TYPE_GAUGE,
+					labelNames: ["event", "service"]
+				});
+				broker.metrics.register({
+					name: METRIC.MOLECULER_EVENT_BULKHEAD_QUEUE_SIZE_LIMIT,
 					type: METRIC.TYPE_GAUGE,
 					labelNames: ["event", "service"]
 				});

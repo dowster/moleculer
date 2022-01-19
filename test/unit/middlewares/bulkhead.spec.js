@@ -60,10 +60,15 @@ describe("Test BulkheadMiddleware", () => {
 
 		mw.created.call(broker, broker);
 
-		expect(broker.metrics.register).toHaveBeenCalledTimes(4);
+		expect(broker.metrics.register).toHaveBeenCalledTimes(8);
 		expect(broker.metrics.register).toHaveBeenCalledWith({
 			type: "gauge",
 			name: "moleculer.request.bulkhead.inflight",
+			labelNames: ["action", "service"]
+		});
+		expect(broker.metrics.register).toHaveBeenCalledWith({
+			type: "gauge",
+			name: "moleculer.request.bulkhead.inflight.limit",
 			labelNames: ["action", "service"]
 		});
 		expect(broker.metrics.register).toHaveBeenCalledWith({
@@ -73,12 +78,27 @@ describe("Test BulkheadMiddleware", () => {
 		});
 		expect(broker.metrics.register).toHaveBeenCalledWith({
 			type: "gauge",
+			name: "moleculer.request.bulkhead.queue.size.limit",
+			labelNames: ["action", "service"]
+		});
+		expect(broker.metrics.register).toHaveBeenCalledWith({
+			type: "gauge",
 			name: "moleculer.event.bulkhead.inflight",
 			labelNames: ["event", "service"]
 		});
 		expect(broker.metrics.register).toHaveBeenCalledWith({
 			type: "gauge",
+			name: "moleculer.event.bulkhead.inflight.limit",
+			labelNames: ["event", "service"]
+		});
+		expect(broker.metrics.register).toHaveBeenCalledWith({
+			type: "gauge",
 			name: "moleculer.event.bulkhead.queue.size",
+			labelNames: ["event", "service"]
+		});
+		expect(broker.metrics.register).toHaveBeenCalledWith({
+			type: "gauge",
+			name: "moleculer.event.bulkhead.queue.size.limit",
 			labelNames: ["event", "service"]
 		});
 	});
@@ -127,85 +147,61 @@ describe("Test BulkheadMiddleware", () => {
 			expect(FLOW).toEqual(expect.arrayContaining(["handler-1", "handler-2", "handler-3"]));
 			expect(handler).toHaveBeenCalledTimes(3);
 
-			expect(broker.metrics.set).toHaveBeenCalledTimes(13);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				1,
-				"moleculer.request.bulkhead.inflight",
-				1,
-				{ action: "posts.find", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				2,
-				"moleculer.request.bulkhead.queue.size",
-				0,
-				{ action: "posts.find", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				3,
-				"moleculer.request.bulkhead.inflight",
-				2,
-				{ action: "posts.find", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				4,
-				"moleculer.request.bulkhead.queue.size",
-				0,
-				{ action: "posts.find", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				5,
-				"moleculer.request.bulkhead.inflight",
-				3,
-				{ action: "posts.find", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				6,
-				"moleculer.request.bulkhead.queue.size",
-				0,
-				{ action: "posts.find", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				7,
-				"moleculer.request.bulkhead.queue.size",
-				1,
-				{ action: "posts.find", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				8,
-				"moleculer.request.bulkhead.queue.size",
-				2,
-				{ action: "posts.find", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				9,
-				"moleculer.request.bulkhead.queue.size",
-				3,
-				{ action: "posts.find", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				10,
-				"moleculer.request.bulkhead.queue.size",
-				4,
-				{ action: "posts.find", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				11,
-				"moleculer.request.bulkhead.queue.size",
-				5,
-				{ action: "posts.find", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				12,
-				"moleculer.request.bulkhead.queue.size",
-				6,
-				{ action: "posts.find", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				13,
-				"moleculer.request.bulkhead.queue.size",
-				7,
-				{ action: "posts.find", service: "posts" }
-			);
+			expect(broker.metrics.set).toHaveBeenCalledTimes(40);
+
+			const tags = { action: "posts.find", service: "posts" };
+
+			const calls = [
+				{ metric: "moleculer.request.bulkhead.inflight", value: 1 },
+				{ metric: "moleculer.request.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.request.bulkhead.queue.size", value: 0 },
+				{ metric: "moleculer.request.bulkhead.queue.size.limit", value: 10 },
+				{ metric: "moleculer.request.bulkhead.inflight", value: 2 },
+				{ metric: "moleculer.request.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.request.bulkhead.queue.size", value: 0 },
+				{ metric: "moleculer.request.bulkhead.queue.size.limit", value: 10 },
+				{ metric: "moleculer.request.bulkhead.inflight", value: 3 },
+				{ metric: "moleculer.request.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.request.bulkhead.queue.size", value: 0 },
+				{ metric: "moleculer.request.bulkhead.queue.size.limit", value: 10 },
+				{ metric: "moleculer.request.bulkhead.inflight", value: 3 },
+				{ metric: "moleculer.request.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.request.bulkhead.queue.size", value: 1 },
+				{ metric: "moleculer.request.bulkhead.queue.size.limit", value: 10 },
+				{ metric: "moleculer.request.bulkhead.inflight", value: 3 },
+				{ metric: "moleculer.request.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.request.bulkhead.queue.size", value: 2 },
+				{ metric: "moleculer.request.bulkhead.queue.size.limit", value: 10 },
+				{ metric: "moleculer.request.bulkhead.inflight", value: 3 },
+				{ metric: "moleculer.request.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.request.bulkhead.queue.size", value: 3 },
+				{ metric: "moleculer.request.bulkhead.queue.size.limit", value: 10 },
+				{ metric: "moleculer.request.bulkhead.inflight", value: 3 },
+				{ metric: "moleculer.request.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.request.bulkhead.queue.size", value: 4 },
+				{ metric: "moleculer.request.bulkhead.queue.size.limit", value: 10 },
+				{ metric: "moleculer.request.bulkhead.inflight", value: 3 },
+				{ metric: "moleculer.request.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.request.bulkhead.queue.size", value: 5 },
+				{ metric: "moleculer.request.bulkhead.queue.size.limit", value: 10 },
+				{ metric: "moleculer.request.bulkhead.inflight", value: 3 },
+				{ metric: "moleculer.request.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.request.bulkhead.queue.size", value: 6 },
+				{ metric: "moleculer.request.bulkhead.queue.size.limit", value: 10 },
+				{ metric: "moleculer.request.bulkhead.inflight", value: 3 },
+				{ metric: "moleculer.request.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.request.bulkhead.queue.size", value: 7 },
+				{ metric: "moleculer.request.bulkhead.queue.size.limit", value: 10 }
+			];
+
+			for (const callNum in calls) {
+				expect(broker.metrics.set).toHaveBeenNthCalledWith(
+					Number(callNum) + 1,
+					calls[callNum].metric,
+					calls[callNum].value,
+					tags
+				);
+			}
 			broker.metrics.set.mockClear();
 
 			FLOW = [];
@@ -226,7 +222,7 @@ describe("Test BulkheadMiddleware", () => {
 					);
 					expect(handler).toHaveBeenCalledTimes(10);
 
-					expect(broker.metrics.set).toHaveBeenCalledTimes(34);
+					expect(broker.metrics.set).toHaveBeenCalledTimes(68);
 				});
 		});
 
@@ -307,7 +303,7 @@ describe("Test BulkheadMiddleware", () => {
 
 			expect(FLOW).toEqual(expect.arrayContaining(["handler-1", "handler-2", "handler-3"]));
 			expect(handler).toHaveBeenCalledTimes(3);
-			expect(broker.metrics.set).toHaveBeenCalledTimes(13);
+			expect(broker.metrics.set).toHaveBeenCalledTimes(40);
 
 			broker.metrics.set.mockClear();
 
@@ -332,7 +328,7 @@ describe("Test BulkheadMiddleware", () => {
 					);
 					expect(handler).toHaveBeenCalledTimes(10);
 
-					expect(broker.metrics.set).toHaveBeenCalledTimes(34);
+					expect(broker.metrics.set).toHaveBeenCalledTimes(68);
 				});
 		});
 	});
@@ -383,85 +379,61 @@ describe("Test BulkheadMiddleware", () => {
 			expect(FLOW).toEqual(expect.arrayContaining(["handler-1", "handler-2", "handler-3"]));
 			expect(handler).toHaveBeenCalledTimes(3);
 
-			expect(broker.metrics.set).toHaveBeenCalledTimes(13);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				1,
-				"moleculer.event.bulkhead.inflight",
-				1,
-				{ event: "user.created", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				2,
-				"moleculer.event.bulkhead.queue.size",
-				0,
-				{ event: "user.created", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				3,
-				"moleculer.event.bulkhead.inflight",
-				2,
-				{ event: "user.created", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				4,
-				"moleculer.event.bulkhead.queue.size",
-				0,
-				{ event: "user.created", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				5,
-				"moleculer.event.bulkhead.inflight",
-				3,
-				{ event: "user.created", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				6,
-				"moleculer.event.bulkhead.queue.size",
-				0,
-				{ event: "user.created", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				7,
-				"moleculer.event.bulkhead.queue.size",
-				1,
-				{ event: "user.created", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				8,
-				"moleculer.event.bulkhead.queue.size",
-				2,
-				{ event: "user.created", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				9,
-				"moleculer.event.bulkhead.queue.size",
-				3,
-				{ event: "user.created", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				10,
-				"moleculer.event.bulkhead.queue.size",
-				4,
-				{ event: "user.created", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				11,
-				"moleculer.event.bulkhead.queue.size",
-				5,
-				{ event: "user.created", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				12,
-				"moleculer.event.bulkhead.queue.size",
-				6,
-				{ event: "user.created", service: "posts" }
-			);
-			expect(broker.metrics.set).toHaveBeenNthCalledWith(
-				13,
-				"moleculer.event.bulkhead.queue.size",
-				7,
-				{ event: "user.created", service: "posts" }
-			);
+			expect(broker.metrics.set).toHaveBeenCalledTimes(40);
+			const tags = { event: "user.created", service: "posts" };
+
+			const calls = [
+				{ metric: "moleculer.event.bulkhead.inflight", value: 1 },
+				{ metric: "moleculer.event.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.event.bulkhead.queue.size", value: 0 },
+				{ metric: "moleculer.event.bulkhead.queue.size.limit", value: 10 },
+				{ metric: "moleculer.event.bulkhead.inflight", value: 2 },
+				{ metric: "moleculer.event.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.event.bulkhead.queue.size", value: 0 },
+				{ metric: "moleculer.event.bulkhead.queue.size.limit", value: 10 },
+				{ metric: "moleculer.event.bulkhead.inflight", value: 3 },
+				{ metric: "moleculer.event.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.event.bulkhead.queue.size", value: 0 },
+				{ metric: "moleculer.event.bulkhead.queue.size.limit", value: 10 },
+				{ metric: "moleculer.event.bulkhead.inflight", value: 3 },
+				{ metric: "moleculer.event.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.event.bulkhead.queue.size", value: 1 },
+				{ metric: "moleculer.event.bulkhead.queue.size.limit", value: 10 },
+				{ metric: "moleculer.event.bulkhead.inflight", value: 3 },
+				{ metric: "moleculer.event.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.event.bulkhead.queue.size", value: 2 },
+				{ metric: "moleculer.event.bulkhead.queue.size.limit", value: 10 },
+				{ metric: "moleculer.event.bulkhead.inflight", value: 3 },
+				{ metric: "moleculer.event.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.event.bulkhead.queue.size", value: 3 },
+				{ metric: "moleculer.event.bulkhead.queue.size.limit", value: 10 },
+				{ metric: "moleculer.event.bulkhead.inflight", value: 3 },
+				{ metric: "moleculer.event.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.event.bulkhead.queue.size", value: 4 },
+				{ metric: "moleculer.event.bulkhead.queue.size.limit", value: 10 },
+				{ metric: "moleculer.event.bulkhead.inflight", value: 3 },
+				{ metric: "moleculer.event.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.event.bulkhead.queue.size", value: 5 },
+				{ metric: "moleculer.event.bulkhead.queue.size.limit", value: 10 },
+				{ metric: "moleculer.event.bulkhead.inflight", value: 3 },
+				{ metric: "moleculer.event.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.event.bulkhead.queue.size", value: 6 },
+				{ metric: "moleculer.event.bulkhead.queue.size.limit", value: 10 },
+				{ metric: "moleculer.event.bulkhead.inflight", value: 3 },
+				{ metric: "moleculer.event.bulkhead.inflight.limit", value: 3 },
+				{ metric: "moleculer.event.bulkhead.queue.size", value: 7 },
+				{ metric: "moleculer.event.bulkhead.queue.size.limit", value: 10 }
+			];
+
+			for (const callNum in calls) {
+				expect(broker.metrics.set).toHaveBeenNthCalledWith(
+					Number(callNum) + 1,
+					calls[callNum].metric,
+					calls[callNum].value,
+					tags
+				);
+			}
+
 			broker.metrics.set.mockClear();
 
 			FLOW = [];
@@ -482,7 +454,7 @@ describe("Test BulkheadMiddleware", () => {
 					);
 					expect(handler).toHaveBeenCalledTimes(10);
 
-					expect(broker.metrics.set).toHaveBeenCalledTimes(34);
+					expect(broker.metrics.set).toHaveBeenCalledTimes(68);
 				});
 		});
 
@@ -563,7 +535,7 @@ describe("Test BulkheadMiddleware", () => {
 
 			expect(FLOW).toEqual(expect.arrayContaining(["handler-1", "handler-2", "handler-3"]));
 			expect(handler).toHaveBeenCalledTimes(3);
-			expect(broker.metrics.set).toHaveBeenCalledTimes(13);
+			expect(broker.metrics.set).toHaveBeenCalledTimes(40);
 
 			broker.metrics.set.mockClear();
 
@@ -588,7 +560,7 @@ describe("Test BulkheadMiddleware", () => {
 					);
 					expect(handler).toHaveBeenCalledTimes(10);
 
-					expect(broker.metrics.set).toHaveBeenCalledTimes(34);
+					expect(broker.metrics.set).toHaveBeenCalledTimes(68);
 				});
 		});
 	});
