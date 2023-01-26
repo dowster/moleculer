@@ -73,6 +73,8 @@ class EndpointList {
 	 * @memberof EndpointList
 	 */
 	getFirst() {
+		if (this.registry.opts.preferLocal && this.findLocalAvailable().length > 0)
+			return this.findLocalAvailable().pop();
 		if (this.endpoints.length > 0) return this.endpoints[0];
 
 		return null;
@@ -185,6 +187,15 @@ class EndpointList {
 	 */
 	hasLocal() {
 		return this.localEndpoints.length > 0;
+	}
+
+	/**
+	 * Filter local endpoints by available
+	 *
+	 * @returns {Array<Endpoint>}
+	 */
+	findLocalAvailable() {
+		return this.localEndpoints.filter(ep => ep.isAvailable);
 	}
 
 	/**

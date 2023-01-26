@@ -1294,7 +1294,10 @@ class ServiceBroker {
 			requestID: ctx.requestID
 		});
 
-		let p = endpoint.action.remoteHandler(ctx);
+		let p =
+			this.registry.preferLocal && endpoint.action.handler
+				? endpoint.action.handler(ctx)
+				: endpoint.action.remoteHandler(ctx);
 
 		// Pointer to Context
 		p.ctx = ctx;

@@ -141,6 +141,11 @@ describe("Test EndpointList.getFirst", () => {
 		Strategy
 	);
 
+	beforeEach(() => {
+		// Ensure tests don't mess with the registry settings
+		registry.opts.preferLocal = ServiceBroker.defaultOptions.registry.preferLocal;
+	});
+
 	it("should return null if empty", () => {
 		expect(list.getFirst()).toBeNull();
 	});
@@ -148,6 +153,13 @@ describe("Test EndpointList.getFirst", () => {
 	it("should return the first endpoint", () => {
 		list.endpoints = [{ a: 5 }, { b: 10 }];
 		expect(list.getFirst()).toBe(list.endpoints[0]);
+	});
+
+	it("should return the first local endpoint", () => {
+		list.endpoints = [{ b: 10 }, { a: 5, local: true, isAvailable: true }];
+		list.localEndpoints = [list.endpoints[1]];
+		registry.opts.preferLocal = true;
+		expect(list.getFirst()).toBe(list.endpoints[1]);
 	});
 });
 
