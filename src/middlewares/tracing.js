@@ -92,7 +92,12 @@ module.exports = function TracingMiddleware(broker) {
 					parentID: ctx.parentID,
 					service: ctx.service,
 					sampled: ctx.tracing,
-					tags
+					tags,
+					parentSpan: {
+						traceID: ctx.requestID,
+						id: ctx.parentID,
+						sampled: ctx.tracing
+					}
 				});
 
 				ctx.tracing = span.sampled;
@@ -215,7 +220,12 @@ module.exports = function TracingMiddleware(broker) {
 					parentID: ctx.parentID,
 					service,
 					sampled: ctx.tracing,
-					tags
+					tags,
+					parentSpan: {
+						traceID: ctx.requestID,
+						id: ctx.parentID,
+						sampled: ctx.tracing
+					}
 				});
 
 				ctx.tracing = span.sampled;
