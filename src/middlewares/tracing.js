@@ -102,6 +102,8 @@ module.exports = function TracingMiddleware(broker) {
 
 				ctx.tracing = span.sampled;
 
+				ctx.span = span;
+
 				// Call the handler
 				return handler(ctx)
 					.then(res => {
