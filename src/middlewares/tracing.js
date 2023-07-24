@@ -222,12 +222,7 @@ module.exports = function TracingMiddleware(broker) {
 					parentID: ctx.parentID,
 					service,
 					sampled: ctx.tracing,
-					tags,
-					parentSpan: {
-						traceID: ctx.requestID,
-						id: ctx.parentID,
-						sampled: ctx.tracing
-					}
+					tags
 				});
 
 				ctx.tracing = span.sampled;
